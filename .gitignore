@@ -4,3 +4,7 @@
 *.pyo
 .*project
 .settings
+build
+*.egg*
+*.tar.gz
+

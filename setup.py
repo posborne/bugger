@@ -1,13 +1,25 @@
 # let's do our part to encourage the use of distribute
+import os
 from distribute_setup import use_setuptools
 use_setuptools()
+
+LONG_DESCRIPTION = ''
+readme_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'README.rst'))
+try:
+    readme_file = open(readme_path, 'r')
+    try:
+        LONG_DESCRIPTION = readme_file.read()
+    finally:
+        readme_file.close()
+except: # couldn't find readme?
+    pass 
 
 # To install, do the following...
 # python setup.py install
 from setuptools import setup, find_packages
 
 setup(
-    name = "Bugger",
+    name = "bugger",
     version = "0.1",
     packages = find_packages(),
     
@@ -20,6 +32,8 @@ setup(
     description = "Easily embed accessible python interactive console into your application",
     license = "MIT",
     keywords = "bugger interactive InteractiveConsole interpreter console code InteractiveInterpreter",
+    url = "http://github.com/posborne/bugger",
+    long_description = LONG_DESCRIPTION,
 )
 
 # Note to self...
