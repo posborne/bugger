@@ -1,7 +1,5 @@
 # let's do our part to encourage the use of distribute
 import os
-from distribute_setup import use_setuptools
-use_setuptools()
 
 LONG_DESCRIPTION = ''
 readme_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'README.rst'))
