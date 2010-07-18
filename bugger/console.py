@@ -58,7 +58,8 @@ class StreamInteractiveConsole(code.InteractiveConsole):
 
     def async_recv(self, bytes_=''):
         """Notify this console that there is data to receive"""
-        bytes_ = self.input_stream.read()
+        if not bytes_:
+            bytes_ = self.input_stream.read()
         encoding = getattr(sys.stdin, 'encoding', None)
 
         # split on both \r\n and \n
@@ -147,7 +148,7 @@ class TelnetInteractiveConsoleServer(object):
                     sys.stdout = client_console.output_stream
                     sys.stderr = client_console.output_stream
                     try:
-                        bytes_ = client_console.async_recv()
+                        bytes_ = client_console.async_recv(bytes_)
                     except (SystemExit,):
                         sys.stdout = _stdout
                         sys.stderr = _stderr
