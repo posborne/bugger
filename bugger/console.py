@@ -97,6 +97,7 @@ class TelnetInteractiveConsoleServer(object):
     def __init__(self, host='0.0.0.0', port=7070, locals_=None):
         self.host = host
         self.port = port
+        self.locals_ = locals_
         self.has_exit = False
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
@@ -132,7 +133,8 @@ class TelnetInteractiveConsoleServer(object):
                 rl.remove(self.server_sock) # we process others as normal
                 client, _addr = self.server_sock.accept() # accept the connection
                 client_console = StreamInteractiveConsole(client.makefile('r', 0),
-                                                          client.makefile('w', 0))
+                                                          client.makefile('w', 0),
+                                                          self.locals_)
                 client_console.async_init()
                 self.client_sockets[client] = client_console
 
