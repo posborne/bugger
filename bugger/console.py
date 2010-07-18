@@ -6,7 +6,6 @@ import code
 import select
 import socket
 import sys
-import SimpleHTTPServer
 
 _stdout = sys.stdout
 _stderr = sys.stderr
@@ -158,5 +157,5 @@ class TelnetInteractiveConsoleServer(object):
                         del self.client_sockets[client]
 
 if __name__ == '__main__':
-    console_server = TelnetInteractiveConsoleServer(host='0.0.0.0', port=7070, _locals=locals())
+    console_server = TelnetInteractiveConsoleServer(host='0.0.0.0', port=7070, locals_=locals())
     console_server.accept_interactions()
