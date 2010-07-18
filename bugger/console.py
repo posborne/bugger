@@ -94,7 +94,8 @@ class TelnetInteractiveConsoleServer(object):
 
     """
 
-    def __init__(self, port=7070, locals=None):
+    def __init__(self, host='0.0.0.0', port=7070, locals=None):
+        self.host = host
         self.port = port
         self.has_exit = False
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -122,7 +123,7 @@ class TelnetInteractiveConsoleServer(object):
             >>> console.stop() # this will end the target method and thread
 
         """
-        self.server_sock.bind(('0.0.0.0', self.port))
+        self.server_sock.bind((self.host, self.port))
         self.server_sock.listen(5) # backlog a few connections
 
         while not self.has_exit:
@@ -155,5 +156,5 @@ class TelnetInteractiveConsoleServer(object):
                         del self.client_sockets[client]
 
 if __name__ == '__main__':
-    console_server = TelnetInteractiveConsoleServer(port=7070, locals=locals())
+    console_server = TelnetInteractiveConsoleServer(host='0.0.0.0', port=7070, locals=locals())
     console_server.accept_interactions()
