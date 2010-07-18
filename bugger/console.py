@@ -14,13 +14,13 @@ _stderr = sys.stderr
 class StreamInteractiveConsole(code.InteractiveConsole):
     """Interactive console that works off an input and output stream"""
 
-    def __init__(self, input_stream, output_stream, locals=None):
+    def __init__(self, input_stream, output_stream, locals_=None):
         """Initialize an interactive interpreter talking to the provided streams
 
         Both ``input_stream`` and ``output_stream`` are assumed to be file-like
         objects.
         """
-        code.InteractiveConsole.__init__(self, locals)
+        code.InteractiveConsole.__init__(self, locals_)
         self.input_stream = input_stream
         self.output_stream = output_stream
         self._asyn_more = 0
@@ -57,13 +57,13 @@ class StreamInteractiveConsole(code.InteractiveConsole):
 
         self.write(sys.ps1)
 
-    def async_recv(self, bytes=''):
+    def async_recv(self, bytes_=''):
         """Notify this console that there is data to receive"""
-        bytes = self.input_stream.read()
+        bytes_ = self.input_stream.read()
         encoding = getattr(sys.stdin, 'encoding', None)
 
         # split on both \r\n and \n
-        for line in '\n'.join(bytes.rstrip().split('\r\n')).split('\n'):
+        for line in '\n'.join(bytes_.rstrip().split('\r\n')).split('\n'):
             if line == '\x04': # EOF
                 raise SystemExit
             if encoding and not isinstance(line, unicode):
@@ -94,7 +94,7 @@ class TelnetInteractiveConsoleServer(object):
 
     """
 
-    def __init__(self, host='0.0.0.0', port=7070, locals=None):
+    def __init__(self, host='0.0.0.0', port=7070, locals_=None):
         self.host = host
         self.port = port
         self.has_exit = False
@@ -137,7 +137,7 @@ class TelnetInteractiveConsoleServer(object):
                 self.client_sockets[client] = client_console
 
             for client in rl:
-                bytes = client.recv(1024)
+                bytes_ = client.recv(1024)
                 if bytes == '': # client disconnect
                     client.close()
                     del self.client_sockets[client]
@@ -146,7 +146,7 @@ class TelnetInteractiveConsoleServer(object):
                     sys.stdout = client_console.output_stream
                     sys.stderr = client_console.output_stream
                     try:
-                        bytes = client_console.async_recv()
+                        bytes_ = client_console.async_recv()
                     except (SystemExit,):
                         sys.stdout = _stdout
                         sys.stderr = _stderr
@@ -156,5 +156,5 @@ class TelnetInteractiveConsoleServer(object):
                         del self.client_sockets[client]
 
 if __name__ == '__main__':
-    console_server = TelnetInteractiveConsoleServer(host='0.0.0.0', port=7070, locals=locals())
+    console_server = TelnetInteractiveConsoleServer(host='0.0.0.0', port=7070, _locals=locals())
     console_server.accept_interactions()
