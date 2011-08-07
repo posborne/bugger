@@ -107,9 +107,10 @@ class TelnetInteractiveConsoleServer(object):
 
     """
 
-    def __init__(self, host='0.0.0.0', port=7070, locals=None):
+    def __init__(self, host='0.0.0.0', port=7070, locals=None, select_timeout=5.0):
         self.host = host
         self.port = port
+        self.select_timeout = select_timeout
         self.locals = locals
         self.has_exit = False
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -141,7 +142,7 @@ class TelnetInteractiveConsoleServer(object):
         self.server_sock.listen(5) # backlog a few connections
 
         while not self.has_exit:
-            rl = select.select(self.client_sockets.keys() + [self.server_sock], [], [], 5.0)[0]
+            rl = select.select(self.client_sockets.keys() + [self.server_sock], [], [], self.select_timeout)[0]
             if self.server_sock in rl:
                 rl.remove(self.server_sock) # we process others as normal
                 client, _addr = self.server_sock.accept() # accept the connection
