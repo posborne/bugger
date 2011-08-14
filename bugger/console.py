@@ -114,7 +114,7 @@ class TelnetInteractiveConsoleServer(object):
         self.locals = locals
         self.has_exit = False
         self.server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
+        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.client_sockets = {}
 
     def client_connect(self, client):
