@@ -86,6 +86,11 @@ class StreamInteractiveConsole(code.InteractiveConsole):
     
             return bytes
 
+    def close(self):
+        """Close the input and output streams"""
+        self.input_stream.close()
+        self.output_stream.close()
+
     def raw_input(self, prompt=''):
         """Override the default behaviour of raw_input to write to the stream"""
         # TODO: we would like to do non-blocking input
@@ -160,8 +165,7 @@ class TelnetInteractiveConsoleServer(object):
                     except (SystemExit,):
                         sys.stdout = _stdout
                         sys.stderr = _stderr
-                        client_console.input_stream.close()
-                        client_console.output_stream.close()
+                        client_console.close()
                         client.close()
                         del self.client_sockets[client]
 
