@@ -187,6 +187,12 @@ class TelnetInteractiveConsoleServer(object):
                         client_console.close()
                         client.close()
                         del self.client_sockets[client]
+        
+        # after main loop, ensure that we perform cleanup
+        try:
+            self.server_sock.close()
+        except socket.error:
+            pass
 
 if __name__ == '__main__':
     print "Starting python telnet server on port 7070"
