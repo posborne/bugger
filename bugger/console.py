@@ -10,6 +10,50 @@ import sys
 _stdout = sys.stdout
 _stderr = sys.stderr
 
+DEBUG_TELNET_OPTIONS = False
+
+#===============================================================================
+# Telnet Protocol Definition
+# 
+# In order to at least "work" with most telnet clients, we need to implement
+# some basic parts of the telnet protocol.  In particular, we need to handle
+# IAC (Interpret As Command) Option specifiers.
+#
+# Requests and responses for specifying options both have the following form:
+# +-----+-------------------+--------+
+# | IAC | Operation/Command | Option |
+# +-----+-------------------+--------+
+#===============================================================================
+class TELNET_COMMANDS(object):
+    SE = 240
+    NOP = 241
+    DM = 242
+    BRK = 243
+    IP = 244
+    AO = 245
+    AYT = 246
+    EC = 247
+    EL = 248
+    GA = 249
+    SB = 250
+    WILL = 251
+    WONT = 252
+    DO = 253
+    DONT = 254
+    IAC = 255
+
+class TELNET_OPTIONS(object):
+    ECHO = 1 # RFC 857
+    SUPRESS_GO_AHEAD = 3 # RFC 858
+    STATUS = 5 # RFC 859
+    TIMING_MARK = 6 # RFC 860
+    TERMINAL_TYPE = 24 # RFC 1091
+    WINDOW_SIZE = 31 # RFC 1073
+    TERMINAL_SPEED = 32 # RFC 1079
+    REMOTE_FLOW_CONTROL = 33 # RFC 1372
+    LINEMODE = 34 # RFC 1184
+    ENVIRONMENT_VARIABLES = 36 # RFC 1408
+
 class StreamInteractiveConsole(code.InteractiveConsole):
     """Interactive console that works off an input and output stream"""
 
@@ -24,7 +68,7 @@ class StreamInteractiveConsole(code.InteractiveConsole):
         self.output_stream = output_stream
         self._asyn_more = 0
         self._byte_buffer = ''
-
+    
     def async_init(self, banner=None, ps1=None, ps2=None):
         """Initialize the interpreter when operating in async mode
 
@@ -63,7 +107,8 @@ class StreamInteractiveConsole(code.InteractiveConsole):
             bytes = self.input_stream.read()
         encoding = getattr(sys.stdin, 'encoding', None)
         unpushed_bytes = ''.join([self._byte_buffer, bytes])
-        # split on both \r\n and \n
+        
+        # split on both \r\n and \n (effectively convert to just \n)
         if not '\n' in unpushed_bytes:
             self._byte_buffer += bytes
         else:
@@ -101,11 +146,52 @@ class StreamInteractiveConsole(code.InteractiveConsole):
         """Write the specified data to the output stream"""
         self.output_stream.write(data)
 
+class _TelnetStream(object):
+    """Wrap raw stream and make console and telnet play nice with each other"""
+    
+    def __init__(self, stream):
+        self.stream = stream
+    
+    def _handle_telnet_option(self, option_bytes):
+        assert len(option_bytes) == 3
+        assert option_bytes[0] == chr(TELNET_COMMANDS.IAC)
+        command, option = [ord(x) for x in option_bytes[1:]]
+        if DEBUG_TELNET_OPTIONS:
+            inverse_command_map = dict([(v, k) for (k, v) in TELNET_COMMANDS.__dict__.items() if not k.startswith('_')])
+            inverse_options_map = dict([(v, k) for (k, v) in TELNET_OPTIONS.__dict__.items() if not k.startswith('_')])
+            command_description = inverse_command_map.get(command, "Unknown")
+            option_description = inverse_options_map.get(option, "Unknown")
+            _stdout.write(self.write("TELNET: Command/Option = %s/%s, %s/%s\r\n" % (command, option, command_description, option_description)))
+    
+    def __getattr__(self, attr):
+        return getattr(self.stream, attr)
+    
+    def sanitize_input(self, data):
+        # first, check for any special telnet sequences (IAC = Interpret As Command)
+        IAC = chr(TELNET_COMMANDS.IAC)
+        while IAC in data:
+            # check to ensure that there are 3 bytes following IAC, as we are
+            # dealing with a stream of data
+            iac_index = data.index(IAC)
+            if iac_index + 3 <= len(data):
+                telnet_option_bytes = data[iac_index:iac_index + 3]
+                data = data[:iac_index] + data[iac_index+3:]
+                self._handle_telnet_option(telnet_option_bytes)
+            else:
+                break
+        
+        return data.replace('\r\n', '\n')
+
+    def read(self, *args, **kwargs):
+        underlying_read = self.stream.read(*args, **kwargs)
+        return self.sanitize_input(underlying_read)
+    
+    def write(self, s):
+        # for telnet, convert newlines to always be \r\n
+        self.stream.write(s.replace('\r\n', '\n').replace('\n', '\r\n'))
+
 class TelnetInteractiveConsoleServer(object):
-    """Make an interactive console available via telnet which can interact with your app
-
-
-    """
+    """Make an interactive console available via telnet which can interact with your app"""
 
     def __init__(self, host='0.0.0.0', port=7070, locals=None, select_timeout=5.0):
         self.host = host
@@ -162,8 +248,8 @@ class TelnetInteractiveConsoleServer(object):
             if self.server_sock in rl:
                 rl.remove(self.server_sock) # we process others as normal
                 client, _addr = self.server_sock.accept() # accept the connection
-                client_console = StreamInteractiveConsole(client.makefile('r', 0),
-                                                          client.makefile('w', 0),
+                client_console = StreamInteractiveConsole(_TelnetStream(client.makefile('r', 0)),
+                                                          _TelnetStream(client.makefile('w', 0)),
                                                           self.locals)
                 client_console.async_init()
                 self.client_sockets[client] = client_console
@@ -177,6 +263,9 @@ class TelnetInteractiveConsoleServer(object):
                     del self.client_sockets[client]
                 else:
                     client_console = self.client_sockets[client]
+                    bytes = client_console.input_stream.sanitize_input(bytes)
+                    if len(bytes) == 0:
+                        continue
                     sys.stdout = client_console.output_stream
                     sys.stderr = client_console.output_stream
                     try:
