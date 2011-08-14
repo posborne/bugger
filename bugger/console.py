@@ -117,6 +117,22 @@ class TelnetInteractiveConsoleServer(object):
         self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, True)
         self.client_sockets = {}
 
+    def client_connect(self, client):
+        """Called when a client successfully connected to the server
+
+        Might be overridden in subclasses.
+        client is the socket object of the client connection.
+        """
+        pass
+
+    def client_disconnect(self, client):
+        """Called when a client is about to disconnected from the server
+
+        Might be overridden in subclasses.
+        client is the socket object of the client connection.
+        """
+        pass
+
     def stop(self):
         """Cleanly shutdown and kill this console session"""
         self.has_exit = True
@@ -151,10 +167,12 @@ class TelnetInteractiveConsoleServer(object):
                                                           self.locals)
                 client_console.async_init()
                 self.client_sockets[client] = client_console
+                self.client_connect(client)
 
             for client in rl:
                 bytes = client.recv(1024)
                 if bytes == '': # client disconnect
+                    self.client_disconnect(client)
                     client.close()
                     del self.client_sockets[client]
                 else:
