@@ -55,7 +55,7 @@ class TestTelnetInteractiveConsole(unittest.TestCase):
             # >>> print sys.version
             # ...
             telnet_connection.write("print sys.version\r\n")
-            self.assertEqual(telnet_connection.read_until(">>> ", 1.0), "%s\n>>> " % sys.version)
+            self.assertEqual(telnet_connection.read_until(">>> ", 1.0), "%s\r\n>>> " % sys.version)
             
             # a = 3.14
             telnet_connection.write("a = 3.14\r\n")
@@ -64,7 +64,7 @@ class TestTelnetInteractiveConsole(unittest.TestCase):
             # >>> int(a * 1000)
             # 314000
             telnet_connection.write("int(a * 1000)\r\n")
-            self.assertEqual(telnet_connection.read_until(">>> ", 1.0), "3140\n>>> ")
+            self.assertEqual(telnet_connection.read_until(">>> ", 1.0), "3140\r\n>>> ")
         finally:
             telnet_connection.close()
 
@@ -87,7 +87,7 @@ class TestTelnetInteractiveConsole(unittest.TestCase):
             # >>> a
             # 10
             tc2.write("a\r\n")
-            self.assertEqual(tc2.read_until(">>> "), "10\n>>> ")
+            self.assertEqual(tc2.read_until(">>> "), "10\r\n>>> ")
         finally:
             tc1.close()
             tc2.close()
