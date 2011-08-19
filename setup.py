@@ -14,7 +14,8 @@ except: # couldn't find readme?
 
 # To install, do the following...
 # python setup.py install
-from setuptools import setup, find_packages
+from distutils.core import setup
+from setuptools import find_packages
 
 setup(
     name = "bugger",
