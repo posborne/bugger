@@ -7,11 +7,14 @@ import select
 import socket
 import sys
 import logging
+from contextlib import contextmanager
 
 _stdout = sys.stdout
 _stderr = sys.stderr
 
 DEBUG_TELNET_OPTIONS = False
+
+logger = logging.getLogger(__name__)
 
 #===============================================================================
 # Telnet Protocol Definition
@@ -252,26 +255,15 @@ class TelnetInteractiveConsoleServer(object):
                 client_console = StreamInteractiveConsole(_TelnetStream(client.makefile('r', 0)),
                                                           _TelnetStream(client.makefile('w', 0)),
                                                           self.locals)
-                try:
-                    client_console.async_init()
-                except Exception as err:
-                    logging.exception('Initializing console failed %r', err)
-                    continue
-
                 self.client_sockets[client] = client_console
 
-                try:
+                with self.cleanup_client(client):
+                    client_console.async_init()
                     self.client_connect(client)
-                except Exception as err:
-                    logging.exception('Connecting client failed %r', err)
-                    continue
 
             for client in rl:
-                try:
+                with self.cleanup_client(client):
                     bytes = client.recv(1024)
-                except Exception as err:
-                    logging.exception('Receiving from client failed %s', err)
-                    continue
 
                 if bytes == '': # client disconnect
                     self.client_disconnect(client)
@@ -298,6 +290,19 @@ class TelnetInteractiveConsoleServer(object):
             self.server_sock.close()
         except socket.error:
             pass
+
+    @contextmanager
+    def cleanup_client(self, client):
+        try:
+            yield
+        except Exception as err:
+            logger.exception('Cleaning up client')
+            console = self.client_sockets.pop(client)
+            try:
+                console.close()
+                client.close()
+            except Exception as err:
+                logger.exception('Unexpected error when cleaning up client %r', err)
 
 if __name__ == '__main__':
     print "Starting python telnet server on port 7070"
