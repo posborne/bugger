@@ -6,6 +6,7 @@ import code
 import select
 import socket
 import sys
+import logging
 
 _stdout = sys.stdout
 _stderr = sys.stderr
@@ -251,12 +252,27 @@ class TelnetInteractiveConsoleServer(object):
                 client_console = StreamInteractiveConsole(_TelnetStream(client.makefile('r', 0)),
                                                           _TelnetStream(client.makefile('w', 0)),
                                                           self.locals)
-                client_console.async_init()
+                try:
+                    client_console.async_init()
+                except Exception as err:
+                    logging.exception('Initializing console failed %r', err)
+                    continue
+
                 self.client_sockets[client] = client_console
-                self.client_connect(client)
+
+                try:
+                    self.client_connect(client)
+                except Exception as err:
+                    logging.exception('Connecting client failed %r', err)
+                    continue
 
             for client in rl:
-                bytes = client.recv(1024)
+                try:
+                    bytes = client.recv(1024)
+                except Exception as err:
+                    logging.exception('Receiving from client failed %s', err)
+                    continue
+
                 if bytes == '': # client disconnect
                     self.client_disconnect(client)
                     client.close()
